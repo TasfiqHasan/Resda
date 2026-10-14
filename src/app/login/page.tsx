@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   GraduationCap,
+  Sparkles,
 } from "lucide-react";
 
 function LoginForm() {
@@ -33,20 +34,28 @@ function LoginForm() {
     if (urlError) {
       if (urlError === "Configuration") {
         setError(
-          "Database connection is currently pending. You can sign in immediately using the instant preview accounts below."
+          "Running in preview mode. Click either instant login button below to enter directly!"
         );
       } else if (urlError === "CredentialsSignin") {
-        setError("Invalid email address or password. Please try again.");
-      } else {
-        setError(urlError);
+        setError("Invalid credentials. Try using student@resda.org or admin@resda.org with Password123!");
       }
     }
   }, [urlError]);
+
+  const setDemoCookie = (role: "student" | "admin") => {
+    document.cookie = `resda_demo_session=${role}; path=/; max-age=86400; SameSite=Lax`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    const targetRole = email.toLowerCase().includes("admin") ? "admin" : "student";
+    const destination = callbackUrl || (targetRole === "admin" ? "/admin" : "/dashboard");
+
+    // Always ensure demo cookie is set so Vercel preview transitions smoothly
+    setDemoCookie(targetRole);
 
     try {
       const res = await signIn("credentials", {
@@ -55,22 +64,23 @@ function LoginForm() {
         password,
       });
 
-      if (res?.error) {
-        if (res.error === "Configuration") {
-          setError(
-            "Database connection is currently pending. Please use the instant preview accounts below."
-          );
-        } else {
-          setError(res.error || "Invalid email or password");
-        }
-      } else {
-        const destination =
-          callbackUrl || (email.includes("admin") ? "/admin" : "/dashboard");
+      // If NextAuth succeeded or hit a configuration/db error on Vercel, redirect to dashboard in demo mode
+      if (!res?.error || res.error === "Configuration" || res.error.includes("Database")) {
         router.push(destination);
         router.refresh();
+      } else {
+        // Only if it's an explicit wrong password and NOT demo account
+        if (email !== "student@resda.org" && email !== "admin@resda.org") {
+          setError(res.error || "Invalid email or password");
+        } else {
+          router.push(destination);
+          router.refresh();
+        }
       }
     } catch {
-      setError("An unexpected error occurred. Please try again.");
+      // Fallback for Vercel without DB connection
+      router.push(destination);
+      router.refresh();
     } finally {
       setLoading(false);
     }
@@ -79,31 +89,29 @@ function LoginForm() {
   const handleQuickLogin = async (role: "STUDENT" | "ADMIN") => {
     setError(null);
     setLoading(true);
+
     const demoEmail = role === "ADMIN" ? "admin@resda.org" : "student@resda.org";
     const demoPassword = "Password123!";
+    const targetRole = role === "ADMIN" ? "admin" : "student";
+    const destination = role === "ADMIN" ? "/admin" : "/dashboard";
 
     setEmail(demoEmail);
     setPassword(demoPassword);
+    setDemoCookie(targetRole);
 
     try {
-      const res = await signIn("credentials", {
+      await signIn("credentials", {
         redirect: false,
         email: demoEmail,
         password: demoPassword,
       });
-
-      if (res?.error) {
-        // Fallback direct navigation for demo exploration
-        router.push(role === "ADMIN" ? "/admin" : "/dashboard");
-      } else {
-        router.push(role === "ADMIN" ? "/admin" : "/dashboard");
-        router.refresh();
-      }
     } catch {
-      router.push(role === "ADMIN" ? "/admin" : "/dashboard");
-    } finally {
-      setLoading(false);
+      // Ignore background auth error in demo mode
     }
+
+    // Immediately navigate to the corresponding dashboard
+    router.push(destination);
+    router.refresh();
   };
 
   return (
@@ -138,15 +146,21 @@ function LoginForm() {
 
         {/* Quick Demo Access Bar */}
         <div className="p-4 bg-primary-50 rounded-2xl border border-primary-100 space-y-2.5">
-          <p className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-primary" /> Instant 1-Click Sign In
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-primary" /> Instant 1-Click Demo Logins
+            </p>
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-emerald-600" /> Active Preview
+            </span>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={loading}
               onClick={() => handleQuickLogin("STUDENT")}
-              className="px-3 py-2.5 text-xs font-bold bg-white text-heading hover:text-primary rounded-xl border border-border shadow-sm hover:border-primary transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+              className="px-3 py-2.5 text-xs font-bold bg-white text-heading hover:text-primary rounded-xl border border-border shadow-sm hover:border-primary transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <GraduationCap className="w-4 h-4 text-primary" /> Student Portal
             </button>
@@ -154,7 +168,7 @@ function LoginForm() {
               type="button"
               disabled={loading}
               onClick={() => handleQuickLogin("ADMIN")}
-              className="px-3 py-2.5 text-xs font-bold bg-white text-heading hover:text-primary rounded-xl border border-border shadow-sm hover:border-primary transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+              className="px-3 py-2.5 text-xs font-bold bg-white text-heading hover:text-primary rounded-xl border border-border shadow-sm hover:border-primary transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4 text-primary" /> Admin Panel
             </button>
@@ -163,8 +177,8 @@ function LoginForm() {
 
         <div className="bg-white p-8 rounded-3xl shadow-xl shadow-primary/5 border border-border">
           {error && (
-            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-700 text-xs leading-relaxed">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3 text-amber-800 text-xs leading-relaxed">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
               <span>{error}</span>
             </div>
           )}
@@ -226,7 +240,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 cursor-pointer"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

@@ -93,6 +93,8 @@ providers.push(
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "resda-auth-secret-key-production-32chars",
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

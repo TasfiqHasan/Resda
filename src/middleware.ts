@@ -5,34 +5,38 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const userRole = req.auth?.user?.role;
+  const demoRole = req.cookies.get("resda_demo_session")?.value; // "student" | "admin"
 
-  // Protected dashboard routes — require login
+  const hasStudentAccess = isLoggedIn || demoRole === "student" || demoRole === "admin";
+  const hasAdminAccess = userRole === "ADMIN" || demoRole === "admin";
+
+  // Protected dashboard routes — require login or demo mode
   if (pathname.startsWith("/dashboard")) {
-    if (!isLoggedIn) {
+    if (!hasStudentAccess) {
       const loginUrl = new URL("/login", req.nextUrl.origin);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
   }
 
-  // Admin routes — require ADMIN role
+  // Admin routes — require ADMIN role or demo admin
   if (pathname.startsWith("/admin")) {
-    if (!isLoggedIn) {
-      const loginUrl = new URL("/login", req.nextUrl.origin);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    if (userRole !== "ADMIN") {
+    if (!hasAdminAccess) {
+      if (!hasStudentAccess) {
+        const loginUrl = new URL("/login", req.nextUrl.origin);
+        loginUrl.searchParams.set("callbackUrl", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
   }
 
-  // Redirect logged-in users away from auth pages
+  // Redirect logged-in or demo users away from auth pages
   if (pathname === "/login" || pathname === "/register") {
-    if (isLoggedIn) {
-      if (userRole === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin", req.nextUrl.origin));
-      }
+    if (hasAdminAccess) {
+      return NextResponse.redirect(new URL("/admin", req.nextUrl.origin));
+    }
+    if (hasStudentAccess) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
   }

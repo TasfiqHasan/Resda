@@ -120,8 +120,11 @@ export default function AdminLayout({
             </div>
 
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors"
+              onClick={() => {
+                document.cookie = "resda_demo_session=; path=/; max-age=0";
+                signOut({ callbackUrl: "/login" });
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out Admin</span>

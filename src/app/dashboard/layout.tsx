@@ -117,8 +117,11 @@ export default function DashboardLayout({
             </div>
 
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              onClick={() => {
+                document.cookie = "resda_demo_session=; path=/; max-age=0";
+                signOut({ callbackUrl: "/login" });
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
