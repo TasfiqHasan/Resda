@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -55,9 +56,15 @@ export default function AdminLayout({
         <div className="h-full flex flex-col">
           {/* Logo */}
           <div className="h-20 flex items-center justify-between px-6 border-b border-slate-800">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-accent rounded-xl flex items-center justify-center text-primary-900 font-black text-lg">
-                R
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="relative w-9 h-9 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <Image
+                  src="/logo-gold.png"
+                  alt="RESDA Emblem"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div>
                 <span className="text-xl font-black text-white tracking-tight">RESDA</span>

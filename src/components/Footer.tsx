@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Phone,
   Mail,
@@ -114,11 +115,16 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand Column */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-                <span className="text-primary-900 font-bold text-lg">R</span>
+            <Link href="/" className="flex items-center gap-3 mb-5 group">
+              <div className="relative w-11 h-11 flex-shrink-0 group-hover:scale-105 transition-transform">
+                <Image
+                  src="/logo-gold.png"
+                  alt="RESDA Emblem"
+                  fill
+                  className="object-contain"
+                />
               </div>
-              <span className="text-2xl font-bold tracking-tight">RESDA</span>
+              <span className="text-2xl font-black tracking-tight text-white">RESDA</span>
             </Link>
             <p className="text-primary-300 text-sm leading-relaxed mb-6">
               Empowering the nation through world-class IT training programs and

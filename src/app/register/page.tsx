@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, User, Phone, ArrowRight, Eye, EyeOff, AlertCircle, CheckCircle2, GraduationCap, Briefcase } from "lucide-react";
 
@@ -58,11 +59,17 @@ export default function RegisterPage() {
 
       <div className="max-w-md w-full space-y-8 relative z-10">
         <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl group-hover:scale-105 transition-transform">
-              R
+          <Link href="/" className="inline-flex items-center gap-3 mb-4 group">
+            <div className="relative w-12 h-12 flex-shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/logo-symbol.png"
+                alt="RESDA Emblem"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            <span className="text-2xl font-black tracking-tight text-heading">RESDA</span>
+            <span className="text-3xl font-black tracking-tight text-primary">RESDA</span>
           </Link>
           <h2 className="text-3xl font-extrabold text-heading">Create an account</h2>
           <p className="mt-2 text-sm text-body">
