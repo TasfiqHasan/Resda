@@ -134,10 +134,16 @@ export function Navbar() {
             {/* CTA + Mobile Toggle */}
             <div className="flex items-center gap-3">
               <Link
-                href="/contact"
-                className="hidden sm:inline-flex items-center px-5 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-all duration-200 shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                href="/login"
+                className="hidden md:inline-flex items-center px-4 py-2 text-sm font-semibold text-primary hover:text-primary-dark transition-colors rounded-lg hover:bg-primary-50"
               >
-                Get Started
+                Sign In
+              </Link>
+              <Link
+                href="/dashboard"
+                className="hidden sm:inline-flex items-center px-5 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-all duration-200 shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 text-sm"
+              >
+                Portal
               </Link>
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -202,13 +208,20 @@ export function Navbar() {
                   </Link>
                 )
               )}
-              <div className="pt-3 border-t border-border">
+              <div className="pt-3 border-t border-border grid grid-cols-2 gap-2">
                 <Link
-                  href="/contact"
+                  href="/login"
                   onClick={() => setIsOpen(false)}
-                  className="block w-full text-center px-5 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors"
+                  className="block w-full text-center px-4 py-2.5 bg-slate-100 text-heading font-semibold rounded-lg hover:bg-slate-200 transition-colors text-sm"
                 >
-                  Get Started
+                  Sign In
+                </Link>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="block w-full text-center px-4 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors text-sm"
+                >
+                  Student Portal
                 </Link>
               </div>
             </div>

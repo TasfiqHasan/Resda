@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTH MODELS
+// ============================================
+
+model User {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  email          String    @unique
+  hashedPassword String?
+  image          String?
+  role           Role      @default(STUDENT)
+  phone          String?
+  bio            String?
+  isActive       Boolean   @default(true)
+  emailVerified  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  accounts    Account[]
+  sessions    Session[]
+  enrollments Enrollment[]
+  inquiries   Inquiry[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// COURSE & ENROLLMENT MODELS
+// ============================================
+
+model Course {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  slug         String       @unique
+  description  String
+  category     String
+  level        CourseLevel  @default(BEGINNER)
+  mode         CourseMode   @default(ONLINE)
+  price        Float
+  originalPrice Float?
+  duration     String       // e.g., "6 months"
+  lessons      Int          @default(0)
+  instructor   String
+  thumbnail    String?
+  syllabus     String[]     // Array of topic strings
+  isPublished  Boolean      @default(false)
+  isFeatured   Boolean      @default(false)
+  rating       Float        @default(0)
+  totalStudents Int         @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Enrollment {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String           @db.ObjectId
+  courseId      String           @db.ObjectId
+  status       EnrollmentStatus @default(ACTIVE)
+  progress     Float            @default(0)   // percentage 0-100
+  enrolledAt   DateTime         @default(now())
+  completedAt  DateTime?
+  batchNo      String?
+  paymentStatus PaymentStatus   @default(PENDING)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+// ============================================
+// SERVICE & INQUIRY MODELS
+// ============================================
+
+model Inquiry {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  type      InquiryType   @default(GENERAL)
+  status    InquiryStatus @default(NEW)
+  userId    String?       @db.ObjectId
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("inquiries")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+  CLIENT
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseMode {
+  ONLINE
+  OFFLINE
+  HYBRID
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  PAUSED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  REFUNDED
+}
+
+enum InquiryType {
+  GENERAL
+  ENROLLMENT
+  SERVICE
+  SUPPORT
+  PARTNERSHIP
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESPONDED
+  CLOSED
+}
