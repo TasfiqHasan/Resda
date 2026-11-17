@@ -14,6 +14,7 @@ const navLinks = [
     children: [
       { name: "Online Courses", href: "/courses" },
       { name: "Offline Training", href: "/training" },
+      { name: "Verify Certificate", href: "/verify" },
     ],
   },
   { name: "IT Services", href: "/services" },

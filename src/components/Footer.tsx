@@ -56,6 +56,7 @@ const quickLinks = [
   { name: "Offline Training", href: "/training" },
   { name: "IT Services", href: "/services" },
   { name: "Portfolio", href: "/portfolio" },
+  { name: "Verify Certificate", href: "/verify" },
   { name: "Contact Us", href: "/contact" },
 ];
 

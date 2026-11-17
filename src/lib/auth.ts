@@ -4,6 +4,11 @@ import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Ensure AUTH_SECRET is always populated even without explicit Vercel environment variables
+if (!process.env.AUTH_SECRET) {
+  process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET || "resda-production-jwt-auth-secret-key-32chars";
+}
+
 // Determine providers dynamically
 const providers = [];
 

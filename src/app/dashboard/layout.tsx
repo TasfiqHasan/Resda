@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -28,13 +28,14 @@ const studentNav = [
   { name: "Profile & Settings", href: "/dashboard/profile", icon: User },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // For LMS classroom viewer, render full-screen theater mode without outer sidebar & dashboard header
+  if (pathname?.startsWith("/dashboard/learn")) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -170,5 +171,17 @@ export default function DashboardLayout({
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <DashboardContent>{children}</DashboardContent>
+    </Suspense>
   );
 }

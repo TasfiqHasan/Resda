@@ -683,9 +683,11 @@ export default function CoursesPage() {
                       </div>
 
                       {/* Course Title */}
-                      <h3 className="text-xl font-bold text-heading mb-2 leading-snug group-hover:text-primary transition-colors">
-                        {course.title}
-                      </h3>
+                      <Link href={`/courses/${course.id}`} className="block">
+                        <h3 className="text-xl font-bold text-heading mb-2 leading-snug group-hover:text-primary transition-colors hover:underline">
+                          {course.title}
+                        </h3>
+                      </Link>
 
                       {/* Instructor */}
                       <div className="flex items-center gap-2.5 mb-3">
@@ -746,17 +748,27 @@ export default function CoursesPage() {
                       </span>
                     </div>
 
-                    {/* Enroll Now Button */}
-                    <button
-                      onClick={() => {
-                        setEnrollingCourse(course);
-                        setEnrollFormSuccess(false);
-                      }}
-                      className="w-full bg-accent hover:bg-accent-light text-slate-900 font-bold py-3 px-4 rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer group-hover:bg-accent-light active:scale-[0.98]"
-                    >
-                      <span>Enroll Now</span>
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </button>
+                    {/* Actions: View Syllabus & Enroll Now */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/courses/${course.id}`}
+                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs text-center"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-primary" />
+                        <span>Syllabus</span>
+                      </Link>
+
+                      <button
+                        onClick={() => {
+                          setEnrollingCourse(course);
+                          setEnrollFormSuccess(false);
+                        }}
+                        className="w-full bg-accent hover:bg-accent-light text-slate-900 font-bold py-3 px-3 rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98] text-xs"
+                      >
+                        <span>Enroll</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

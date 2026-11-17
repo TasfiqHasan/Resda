@@ -183,9 +183,12 @@ export default function StudentDashboardPage() {
                       <strong className="text-heading font-medium">Up Next:</strong> {course.nextLesson}
                     </span>
                   </div>
-                  <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto">
+                  <Link
+                    href={`/dashboard/learn/${course.id === "1" ? "full-stack-web-dev" : "python-programming"}`}
+                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  >
                     <PlayCircle className="w-3.5 h-3.5" /> Resume Lesson
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}

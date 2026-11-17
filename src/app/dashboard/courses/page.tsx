@@ -191,9 +191,18 @@ export default function StudentCoursesPage() {
 
             {/* Card Action Footer */}
             <div className="p-4 bg-slate-50 border-t border-border flex items-center justify-between gap-2">
-              <button className="flex-1 py-2 px-3 bg-white hover:bg-slate-100 border border-border text-heading text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5">
+              <Link
+                href={`/courses/${
+                  course.id === "course-1"
+                    ? "full-stack-web-dev"
+                    : course.id === "course-2"
+                    ? "python-programming"
+                    : "ui-ux-design"
+                }`}
+                className="flex-1 py-2 px-3 bg-white hover:bg-slate-100 border border-border text-heading text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+              >
                 <FileText className="w-3.5 h-3.5 text-body" /> Syllabus
-              </button>
+              </Link>
 
               {course.hasCertificate ? (
                 <Link
@@ -203,9 +212,18 @@ export default function StudentCoursesPage() {
                   <Download className="w-3.5 h-3.5" /> Certificate
                 </Link>
               ) : (
-                <button className="flex-1 py-2 px-3 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                <Link
+                  href={`/dashboard/learn/${
+                    course.id === "course-1"
+                      ? "full-stack-web-dev"
+                      : course.id === "course-2"
+                      ? "python-programming"
+                      : "ui-ux-design"
+                  }`}
+                  className="flex-1 py-2 px-3 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
                   <PlayCircle className="w-3.5 h-3.5" /> Continue
-                </button>
+                </Link>
               )}
             </div>
           </div>
