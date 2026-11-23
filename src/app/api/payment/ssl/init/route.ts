@@ -23,6 +23,14 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanPhone = customerPhone.replace(/[^0-9]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(cleanPhone)) {
+      return NextResponse.json(
+        { error: "Invalid Bangladeshi mobile number. Please provide a valid 11-digit number starting with 013-019 (e.g. 01712345678)." },
+        { status: 400 }
+      );
+    }
+
     const course = getCourseBySlug(courseSlug);
     if (!course) {
       return NextResponse.json({ error: "Invalid course selected." }, { status: 404 });

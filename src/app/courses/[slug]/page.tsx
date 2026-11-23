@@ -67,6 +67,13 @@ function CourseDetailContent() {
     e.preventDefault();
     setPaymentError(null);
 
+    // Validate phone number format (must be 11 digits BD number)
+    const cleanPhone = formData.phone.replace(/[^0-9]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(cleanPhone)) {
+      setPaymentError("Invalid phone number! Please enter a valid 11-digit Bangladeshi mobile number starting with 013-019 (e.g. 01712345678).");
+      return;
+    }
+
     // If user explicitly chose pay at campus offline
     if (paymentMethod === "offline") {
       setEnrollSubmitted(true);
