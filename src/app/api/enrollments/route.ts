@@ -1,38 +1,25 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import {
+  getStudentEnrollments,
+  enrollStudentInCourse,
+  getStudentCertificates,
+} from "@/lib/enrollments-store";
+import { getCourseBySlug } from "@/lib/courses-data";
 
-// GET /api/enrollments — Get current user's enrollments or all (admin)
-export async function GET() {
+// GET /api/enrollments — List current enrollments
+export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId") || undefined;
+    const certificates = searchParams.get("certificates") === "true";
+
+    if (certificates) {
+      const certs = await getStudentCertificates(userId);
+      return NextResponse.json(certs);
     }
 
-    const isAdmin = session.user.role === "ADMIN";
-
-    const enrollments = await prisma.enrollment.findMany({
-      where: isAdmin ? {} : { userId: session.user.id },
-      include: {
-        course: {
-          select: {
-            title: true,
-            slug: true,
-            category: true,
-            duration: true,
-            instructor: true,
-            thumbnail: true,
-            level: true,
-          },
-        },
-        user: isAdmin
-          ? { select: { name: true, email: true } }
-          : undefined,
-      },
-      orderBy: { enrolledAt: "desc" },
-    });
-
+    const enrollments = await getStudentEnrollments(userId);
     return NextResponse.json(enrollments);
   } catch (error) {
     console.error("Error fetching enrollments:", error);
@@ -46,84 +33,36 @@ export async function GET() {
 // POST /api/enrollments — Enroll in a course
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Please log in to enroll" },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
-    const { courseId, batchNo } = body;
+    const { courseId, courseSlug, title, category, mode, batch, instructor, studentName, userId } = body;
 
-    if (!courseId) {
-      return NextResponse.json(
-        { error: "Course ID is required" },
-        { status: 400 }
-      );
+    const targetSlug = courseSlug || courseId;
+    if (!targetSlug) {
+      return NextResponse.json({ error: "courseSlug or courseId is required" }, { status: 400 });
     }
 
-    // Check course exists
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-    });
+    const detailed = getCourseBySlug(targetSlug);
 
-    if (!course) {
-      return NextResponse.json(
-        { error: "Course not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if already enrolled
-    const existingEnrollment = await prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: session.user.id,
-          courseId,
-        },
-      },
-    });
-
-    if (existingEnrollment) {
-      return NextResponse.json(
-        { error: "You are already enrolled in this course" },
-        { status: 409 }
-      );
-    }
-
-    // Create enrollment
-    const enrollment = await prisma.enrollment.create({
-      data: {
-        userId: session.user.id,
-        courseId,
-        batchNo: batchNo || null,
-        status: "ACTIVE",
-        paymentStatus: "PENDING",
-      },
-      include: {
-        course: { select: { title: true } },
-      },
-    });
-
-    // Increment totalStudents on course
-    await prisma.course.update({
-      where: { id: courseId },
-      data: { totalStudents: { increment: 1 } },
+    const enrollment = await enrollStudentInCourse({
+      userId: userId || "demo-student-001",
+      userName: studentName || "Tanvir Ahmed",
+      courseId: detailed?.id || targetSlug,
+      courseSlug: targetSlug,
+      title: title || detailed?.title || targetSlug,
+      category: category || detailed?.category || "Technology",
+      mode: mode || detailed?.mode || "Online Live",
+      batch: batch || "Batch WD-48",
+      instructor: instructor || detailed?.instructor?.name || "Senior Mentor",
     });
 
     return NextResponse.json(
-      {
-        message: `Successfully enrolled in ${enrollment.course.title}`,
-        enrollment,
-      },
+      { message: `Successfully enrolled in ${enrollment.title}`, enrollment },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error creating enrollment:", error);
     return NextResponse.json(
-      { error: "Failed to enroll" },
+      { error: "Failed to create enrollment" },
       { status: 500 }
     );
   }

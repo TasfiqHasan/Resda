@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateSSLPayment } from "@/lib/sslcommerz";
 import { updatePaymentRecord, getPaymentRecord } from "@/lib/payments-store";
+import { enrollStudentInCourse } from "@/lib/enrollments-store";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -38,6 +39,19 @@ export async function POST(req: Request) {
         cardIssuer: card_issuer || validation.card_issuer,
         cardBrand: card_brand || validation.card_brand,
       });
+
+      // Update in-memory enrollment store for instant student portal visibility
+      if (existing?.courseSlug) {
+        enrollStudentInCourse({
+          userId: existing.userId || "demo-student-001",
+          userName: existing.customerName || "Tanvir Ahmed",
+          courseId: existing.courseSlug,
+          courseSlug: existing.courseSlug,
+          title: existing.courseTitle || existing.courseSlug,
+          category: "Live Program",
+          batch: "Admissions Cohort 2026",
+        });
+      }
 
       // If there is an associated user & course in DB, update or create enrollment
       if (existing?.userId && existing?.courseSlug) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -34,7 +34,30 @@ import { getCourseBySlug } from "@/lib/courses-data";
 function LMSClassroomContent() {
   const params = useParams();
   const courseId = (params?.courseId as string) || "full-stack-web-dev";
-  const course = getCourseBySlug(courseId) || getCourseBySlug("full-stack-web-dev")!;
+  const [course, setCourse] = useState(() => {
+    return getCourseBySlug(courseId) || getCourseBySlug("full-stack-web-dev")!;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchDynamicCourse() {
+      try {
+        const res = await fetch(`/api/courses/${courseId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.title) {
+            setCourse(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load dynamic LMS course details:", err);
+      }
+    }
+    fetchDynamicCourse();
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId]);
 
   // Video player simulator state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -95,11 +118,26 @@ function LMSClassroomContent() {
   const currentLessonKey = `${activeModuleIdx}-${activeLessonIdx}`;
   const isCurrentLessonCompleted = !!completedLessons[currentLessonKey];
 
-  const handleToggleComplete = () => {
+  const handleToggleComplete = async () => {
+    const nextVal = !isCurrentLessonCompleted;
     setCompletedLessons({
       ...completedLessons,
-      [currentLessonKey]: !isCurrentLessonCompleted,
+      [currentLessonKey]: nextVal,
     });
+
+    try {
+      await fetch("/api/enrollments/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseSlug: courseId,
+          lessonKey: currentLessonKey,
+          completed: nextVal,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to sync progress with server:", err);
+    }
   };
 
   const handleCopyCode = () => {

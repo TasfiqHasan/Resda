@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Search,
@@ -9,84 +9,128 @@ import {
   UserCheck,
   GraduationCap,
   Briefcase,
-  MoreVertical,
   UserPlus,
   CheckCircle2,
+  XCircle,
+  Trash2,
+  RefreshCw,
+  X,
 } from "lucide-react";
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | "STUDENT" | "INSTRUCTOR" | "ADMIN" | "CLIENT">("ALL");
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const usersList = [
-    {
-      id: "usr-1",
-      name: "Tanvir Ahmed",
-      email: "tanvir@resda.org",
-      role: "STUDENT",
-      batch: "WD-48 (MERN)",
-      phone: "+880 1700-123456",
-      status: "ACTIVE",
-      joined: "Oct 01, 2026",
-    },
-    {
-      id: "usr-2",
-      name: "MD. Rafiqul Islam",
-      email: "rafiq@resda.org",
-      role: "INSTRUCTOR",
-      batch: "Python & Data Track",
-      phone: "+880 1711-234567",
-      status: "ACTIVE",
-      joined: "Jan 12, 2026",
-    },
-    {
-      id: "usr-3",
-      name: "Nusrat Jahan",
-      email: "nusrat@resda.org",
-      role: "INSTRUCTOR",
-      batch: "UI/UX Design Track",
-      phone: "+880 1722-345678",
-      status: "ACTIVE",
-      joined: "Mar 05, 2026",
-    },
-    {
-      id: "usr-4",
-      name: "Apex Global Retail",
-      email: "sarah@apexglobal.com",
-      role: "CLIENT",
-      batch: "E-Commerce System Project",
-      phone: "+880 1733-456789",
-      status: "ACTIVE",
-      joined: "Aug 19, 2026",
-    },
-    {
-      id: "usr-5",
-      name: "Mahmud Hasan",
-      email: "mahmud@gmail.com",
-      role: "STUDENT",
-      batch: "NET-29 (Network Admin)",
-      phone: "+880 1744-567890",
-      status: "ACTIVE",
-      joined: "Sep 25, 2026",
-    },
-    {
-      id: "usr-6",
-      name: "System Admin",
-      email: "admin@resda.org",
-      role: "ADMIN",
-      batch: "All Access",
-      phone: "+880 1700-000000",
-      status: "ACTIVE",
-      joined: "Jan 01, 2026",
-    },
-  ];
+  // Add User modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<"STUDENT" | "INSTRUCTOR" | "ADMIN" | "CLIENT">("STUDENT");
+  const [newBatch, setNewBatch] = useState("Batch WD-49");
+  const [newPhone, setNewPhone] = useState("+880 1700-123456");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filteredUsers = usersList.filter((u) => {
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setUsers(data);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          role: newRole,
+          batch: newBatch,
+          phone: newPhone,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers((prev) => [data.user, ...prev]);
+        setShowAddModal(false);
+        setNewName("");
+        setNewEmail("");
+      }
+    } catch (err) {
+      console.error("Failed to create user:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (id: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, status: u.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" } : u
+      )
+    );
+    try {
+      await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "toggleStatus" }),
+      });
+    } catch (err) {
+      console.error("Failed to toggle status:", err);
+    }
+  };
+
+  const handleRoleChange = async (id: string, newRole: any) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, role: newRole } : u))
+    );
+    try {
+      await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "role", role: newRole }),
+      });
+    } catch (err) {
+      console.error("Failed to update role:", err);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this user?")) return;
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    try {
+      await fetch(`/api/users?id=${id}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+    }
+  };
+
+  const filteredUsers = users.filter((u) => {
     const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
     const matchesSearch =
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.batch.toLowerCase().includes(search.toLowerCase());
+      (u.batch && u.batch.toLowerCase().includes(search.toLowerCase())) ||
+      (u.phone && u.phone.includes(search));
     return matchesRole && matchesSearch;
   });
 
@@ -103,9 +147,20 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <button className="px-4 py-2 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-accent/20">
-          <UserPlus className="w-4 h-4" /> Add User Manually
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadUsers}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-accent/20"
+          >
+            <UserPlus className="w-4 h-4" /> Add User Manually
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -162,40 +217,55 @@ export default function AdminUsersPage() {
                     <p className="text-[11px] text-slate-500">{u.email}</p>
                   </td>
                   <td className="py-3.5 px-4">
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                    <select
+                      value={u.role}
+                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-900 ${
                         u.role === "ADMIN"
-                          ? "bg-purple-950 text-purple-400 border border-purple-800"
+                          ? "text-rose-400 border-rose-800"
                           : u.role === "INSTRUCTOR"
-                          ? "bg-amber-950 text-amber-400 border border-amber-800"
+                          ? "text-purple-400 border-purple-800"
                           : u.role === "CLIENT"
-                          ? "bg-sky-950 text-sky-400 border border-sky-800"
-                          : "bg-blue-950 text-blue-400 border border-blue-800"
+                          ? "text-sky-400 border-sky-800"
+                          : "text-emerald-400 border-emerald-800"
                       }`}
                     >
-                      {u.role === "ADMIN" ? (
-                        <ShieldCheck className="w-3 h-3" />
-                      ) : u.role === "INSTRUCTOR" ? (
-                        <UserCheck className="w-3 h-3" />
-                      ) : u.role === "CLIENT" ? (
-                        <Briefcase className="w-3 h-3" />
-                      ) : (
-                        <GraduationCap className="w-3 h-3" />
-                      )}
-                      {u.role}
-                    </span>
+                      <option value="STUDENT">STUDENT</option>
+                      <option value="INSTRUCTOR">INSTRUCTOR</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="CLIENT">CLIENT</option>
+                    </select>
                   </td>
                   <td className="py-3.5 px-4 font-medium text-slate-200">{u.batch}</td>
                   <td className="py-3.5 px-4 text-slate-400">{u.phone}</td>
                   <td className="py-3.5 px-4">
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> {u.status}
-                    </span>
+                    <button
+                      onClick={() => handleToggleStatus(u.id)}
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors ${
+                        u.status === "ACTIVE"
+                          ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
+                          : "bg-rose-950 text-rose-400 border border-rose-800"
+                      }`}
+                    >
+                      {u.status === "ACTIVE" ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" /> ACTIVE
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3 h-3" /> SUSPENDED
+                        </>
+                      )}
+                    </button>
                   </td>
                   <td className="py-3.5 px-4 text-slate-500">{u.joined}</td>
                   <td className="py-3.5 px-4 text-right">
-                    <button className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-                      <MoreVertical className="w-4 h-4" />
+                    <button
+                      onClick={() => handleDeleteUser(u.id)}
+                      title="Delete User"
+                      className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -204,6 +274,106 @@ export default function AdminUsersPage() {
           </table>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-accent" /> Register User to Portal
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Shakil Mahmud"
+                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="e.g. shakil@gmail.com"
+                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Role</label>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as any)}
+                    className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
+                  >
+                    <option value="STUDENT">Student</option>
+                    <option value="INSTRUCTOR">Instructor</option>
+                    <option value="CLIENT">Client</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Batch / Track</label>
+                  <input
+                    type="text"
+                    value={newBatch}
+                    onChange={(e) => setNewBatch(e.target.value)}
+                    placeholder="e.g. Batch WD-49"
+                    className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="e.g. +880 1712-345678"
+                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-accent hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5"
+                >
+                  {isSubmitting ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

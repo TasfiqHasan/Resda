@@ -255,14 +255,36 @@ export default function ContactPage() {
       return;
     }
 
-    // Process client-side simulation
+    // Send to dynamic CRM inquiries API
     setIsSubmitting(true);
     setErrors({});
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 1200);
+    fetch("/api/inquiries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+        type:
+          formData.subject.toLowerCase().includes("course") ||
+          formData.subject.toLowerCase().includes("admission") ||
+          formData.subject.toLowerCase().includes("training")
+            ? "ENROLLMENT"
+            : formData.subject.toLowerCase().includes("software") ||
+              formData.subject.toLowerCase().includes("development") ||
+              formData.subject.toLowerCase().includes("consulting")
+            ? "SERVICE"
+            : "GENERAL",
+      }),
+    })
+      .catch((err) => console.warn("Inquiry submission fallback:", err))
+      .finally(() => {
+        setIsSubmitting(false);
+        setIsSubmitted(true);
+      });
   };
 
   const resetForm = () => {

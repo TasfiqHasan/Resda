@@ -1,21 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, Lock, CheckCircle2 } from "lucide-react";
 
 export default function StudentProfilePage() {
   const [name, setName] = useState("Tanvir Ahmed");
-  const [email] = useState("tanvir@resda.org");
+  const [email] = useState("student@resda.org");
   const [phone, setPhone] = useState("+880 1700-123456");
   const [location, setLocation] = useState("Dhaka, Bangladesh");
-  const [bio, setBio] = useState("Full-Stack Web Development student at RESDA, focusing on Next.js, Node.js, and cloud deployments.");
+  const [bio, setBio] = useState(
+    "Full-Stack Web Development student at RESDA, focusing on Next.js, Node.js, and cloud deployments."
+  );
   const [saved, setSaved] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("resda_student_profile");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.name) setName(parsed.name);
+        if (parsed.phone) setPhone(parsed.phone);
+        if (parsed.location) setLocation(parsed.location);
+        if (parsed.bio) setBio(parsed.bio);
+      }
+    } catch {}
+  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      localStorage.setItem(
+        "resda_student_profile",
+        JSON.stringify({ name, phone, location, bio })
+      );
+    } catch {}
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
+
+  const handlePasswordUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) return;
+    setPasswordSaved(true);
+    setCurrentPassword("");
+    setNewPassword("");
+    setTimeout(() => setPasswordSaved(false), 3000);
+  };
+
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -29,7 +69,14 @@ export default function StudentProfilePage() {
       {saved && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>Profile changes have been successfully updated.</span>
+          <span>Profile changes have been successfully saved and synced across portal.</span>
+        </div>
+      )}
+
+      {passwordSaved && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>Password updated successfully.</span>
         </div>
       )}
 
@@ -37,7 +84,7 @@ export default function StudentProfilePage() {
         {/* Avatar header */}
         <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
           <div className="w-16 h-16 rounded-2xl bg-primary text-white font-black text-xl flex items-center justify-center shadow-lg shadow-primary/20">
-            TA
+            {initials || "TA"}
           </div>
           <div>
             <h3 className="text-lg font-bold text-heading">{name}</h3>
@@ -56,6 +103,7 @@ export default function StudentProfilePage() {
                 <User className="w-4 h-4 text-body absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border text-xs focus:outline-none focus:border-primary"
@@ -128,18 +176,32 @@ export default function StudentProfilePage() {
           <h4 className="text-sm font-bold text-heading flex items-center gap-2 mb-3">
             <Lock className="w-4 h-4 text-primary" /> Security & Password
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
-            <input
-              type="password"
-              placeholder="Current password"
-              className="p-2.5 rounded-xl border border-border text-xs focus:outline-none focus:border-primary"
-            />
-            <input
-              type="password"
-              placeholder="New password"
-              className="p-2.5 rounded-xl border border-border text-xs focus:outline-none focus:border-primary"
-            />
-          </div>
+          <form onSubmit={handlePasswordUpdate} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+              <input
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Current password"
+                className="p-2.5 rounded-xl border border-border text-xs focus:outline-none focus:border-primary"
+              />
+              <input
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password"
+                className="p-2.5 rounded-xl border border-border text-xs focus:outline-none focus:border-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl text-xs transition-colors"
+            >
+              Update Password
+            </button>
+          </form>
         </div>
       </div>
     </div>

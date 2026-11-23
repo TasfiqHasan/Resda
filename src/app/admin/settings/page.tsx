@@ -1,22 +1,71 @@
 "use client";
 
-import { useState } from "react";
-import { Settings, Shield, Bell, Database, Mail, Globe, Save, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Shield, Bell, Database, Mail, Globe, Save, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
-  const [siteName, setSiteName] = useState("RESDA - Skill Empowerment for the Nation's");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [siteName, setSiteName] = useState("RESDA - Skill Empowerment for the Nation's Future");
   const [supportEmail, setSupportEmail] = useState("info@resda.org");
+  const [hotline, setHotline] = useState("+880 1700-000000");
   const [campusAddress, setCampusAddress] = useState(
     "19th Floor, Nafi Tower, 53 Gulshan Avenue, Gulshan-1, Dhaka 1212, Bangladesh"
   );
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [autoApproveEnrollments, setAutoApproveEnrollments] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.siteName) setSiteName(data.siteName);
+          if (data.supportEmail) setSupportEmail(data.supportEmail);
+          if (data.hotline) setHotline(data.hotline);
+          if (data.campusAddress) setCampusAddress(data.campusAddress);
+          if (typeof data.maintenanceMode === "boolean") setMaintenanceMode(data.maintenanceMode);
+          if (typeof data.autoApproveEnrollments === "boolean")
+            setAutoApproveEnrollments(data.autoApproveEnrollments);
+        }
+      } catch (err) {
+        console.warn("Failed to load settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteName,
+          supportEmail,
+          hotline,
+          campusAddress,
+          maintenanceMode,
+          autoApproveEnrollments,
+        }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to save settings:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -76,7 +125,8 @@ export default function AdminSettingsPage() {
                 </label>
                 <input
                   type="text"
-                  defaultValue="+880 1700-000000"
+                  value={hotline}
+                  onChange={(e) => setHotline(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-accent"
                 />
               </div>
@@ -137,9 +187,10 @@ export default function AdminSettingsPage() {
           <div className="flex justify-end pt-3">
             <button
               type="submit"
+              disabled={saving}
               className="px-6 py-2.5 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-accent/20"
             >
-              <Save className="w-4 h-4" /> Save Configurations
+              <Save className="w-4 h-4" /> {saving ? "Saving Changes..." : "Save Settings & Deploy"}
             </button>
           </div>
         </div>

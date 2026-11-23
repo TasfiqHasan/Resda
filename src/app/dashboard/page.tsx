@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -12,65 +13,69 @@ import {
   ArrowRight,
   ExternalLink,
   Laptop,
+  RefreshCw,
 } from "lucide-react";
 
 export default function StudentDashboardPage() {
-  const stats = [
-    { label: "Enrolled Courses", value: "3", icon: BookOpen, change: "+1 this month" },
-    { label: "Attendance Rate", value: "96%", icon: TrendingUp, change: "Excellent" },
-    { label: "Hours Learned", value: "48 hrs", icon: Clock, change: "12 hrs this week" },
-    { label: "Certificates Earned", value: "1", icon: Award, change: "Verified" },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
 
-  const ongoingCourses = [
-    {
-      id: "1",
-      title: "Full-Stack Web Development (MERN)",
-      batch: "Batch WD-48 (Online Live)",
-      instructor: "Tanvir Ahmed",
-      progress: 68,
-      nextLesson: "Module 14: Next.js Server Components & Prisma ORM",
-      nextDate: "Today, 8:00 PM",
-      totalLessons: 42,
-      completedLessons: 28,
-    },
-    {
-      id: "2",
-      title: "Python Programming & Data Engineering",
-      batch: "Batch PY-19 (Weekend)",
-      instructor: "MD. Rafiqul Islam",
-      progress: 35,
-      nextLesson: "Module 6: Pandas DataFrames & NumPy Arrays",
-      nextDate: "Friday, 3:30 PM",
-      totalLessons: 30,
-      completedLessons: 11,
-    },
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/enrollments");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setEnrollments(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load student enrollments:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboard();
+  }, []);
+
+  const totalLessons = enrollments.reduce((sum, e) => sum + (e.lessonsCompleted || 0), 0);
+  const hoursLearned = Math.max(totalLessons * 2, 48);
+  const certificatesCount = enrollments.filter((e) => e.hasCertificate || e.progress >= 100).length;
+  const activeCourse = enrollments.find((e) => e.status !== "COMPLETED") || enrollments[0];
+
+  const stats = [
+    { label: "Enrolled Courses", value: enrollments.length.toString(), icon: BookOpen, change: "+1 this month" },
+    { label: "Attendance Rate", value: "96%", icon: TrendingUp, change: "Excellent" },
+    { label: "Hours Learned", value: `${hoursLearned} hrs`, icon: Clock, change: "Active pacing" },
+    { label: "Certificates Earned", value: certificatesCount.toString(), icon: Award, change: "Verified" },
   ];
 
   const upcomingSchedule = [
     {
       time: "08:00 PM - 10:00 PM",
       day: "Today",
-      title: "Full-Stack Live Mentorship Session",
-      instructor: "Tanvir Ahmed",
-      mode: "Online (Zoom)",
-      link: "#",
+      title: activeCourse ? `${activeCourse.title} Live Workshop` : "Full-Stack Live Mentorship Session",
+      instructor: activeCourse ? activeCourse.instructor : "Tanvir Ahmed",
+      mode: "Online (Zoom Virtual Lab)",
+      link: activeCourse ? `/dashboard/learn/${activeCourse.courseSlug || activeCourse.courseId}` : "#",
     },
     {
       time: "03:30 PM - 05:30 PM",
       day: "Friday",
-      title: "Python Hands-on Lab Session",
-      instructor: "MD. Rafiqul Islam",
+      title: "Hands-on Computer Lab Session",
+      instructor: "Dr. Rafiqul Islam",
       mode: "Offline • Lab 302, Nafi Tower",
-      link: "#",
+      link: "/dashboard/schedule",
     },
     {
       time: "07:00 PM - 08:30 PM",
       day: "Sunday",
       title: "Weekly Code Review & Sprint Demo",
-      instructor: "Lead Mentors",
-      mode: "Online (Discord)",
-      link: "#",
+      instructor: "RESDA Lead Mentors",
+      mode: "Online (Live Code Share)",
+      link: activeCourse ? `/dashboard/learn/${activeCourse.courseSlug || activeCourse.courseId}` : "#",
     },
   ];
 
@@ -87,16 +92,25 @@ export default function StudentDashboardPage() {
             Welcome back, Tanvir! 👋
           </h1>
           <p className="mt-2 text-primary-100 text-sm leading-relaxed">
-            You are making steady progress in your Full-Stack Web Development track. Your next live workshop begins at 8:00 PM tonight.
+            You are enrolled in {enrollments.length} professional IT tracks. Your next live workshop begins at 8:00 PM tonight.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href="#"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-light text-primary-900 font-bold rounded-xl text-xs transition-colors shadow-lg shadow-accent/20"
-            >
-              <PlayCircle className="w-4 h-4" /> Join Live Classroom
-            </a>
+            {activeCourse ? (
+              <Link
+                href={`/dashboard/learn/${activeCourse.courseSlug || activeCourse.courseId}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-light text-primary-900 font-bold rounded-xl text-xs transition-colors shadow-lg shadow-accent/20"
+              >
+                <PlayCircle className="w-4 h-4" /> Continue: {activeCourse.title.split(" ")[0]}
+              </Link>
+            ) : (
+              <Link
+                href="/courses"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-light text-primary-900 font-bold rounded-xl text-xs transition-colors shadow-lg shadow-accent/20"
+              >
+                <PlayCircle className="w-4 h-4" /> Explore Courses
+              </Link>
+            )}
             <Link
               href="/dashboard/schedule"
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl text-xs backdrop-blur-sm transition-colors border border-white/20"
@@ -118,87 +132,99 @@ export default function StudentDashboardPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-body">{stat.label}</span>
-                <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-heading mt-2">{stat.value}</p>
-              <span className="text-[11px] text-emerald-600 font-medium inline-block mt-1">
-                {stat.change}
-              </span>
+              <div className="mt-2">
+                <p className="text-2xl font-black text-heading">{stat.value}</p>
+                <span className="text-[11px] text-emerald-600 font-semibold">{stat.change}</span>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Two Column Section: Continue Learning + Schedule */}
+      {/* Main 2-Column: Ongoing Courses & Live Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Enrolled Courses - 2 cols */}
+        {/* Ongoing Courses (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-heading">Continue Learning</h2>
+            <h2 className="text-lg font-bold text-heading flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" /> Active Enrolled Programs
+            </h2>
             <Link
               href="/dashboard/courses"
               className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
             >
-              All Courses <ArrowRight className="w-3.5 h-3.5" />
+              View All ({enrollments.length}) <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           <div className="space-y-4">
-            {ongoingCourses.map((course) => (
+            {enrollments.map((course) => (
               <div
                 key={course.id}
-                className="p-6 rounded-2xl bg-white border border-border shadow-sm hover:border-primary/40 transition-all space-y-4"
+                className="p-5 rounded-2xl bg-white border border-border shadow-sm hover:shadow-md transition-all space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary-50 px-2.5 py-0.5 rounded-full">
-                      {course.batch}
+                    <span className="text-[11px] font-bold text-primary bg-primary-50 px-2.5 py-0.5 rounded-full inline-block mb-1.5">
+                      {course.batch} • {course.mode}
                     </span>
-                    <h3 className="text-base font-bold text-heading mt-1.5">{course.title}</h3>
+                    <h3 className="text-base font-bold text-heading">{course.title}</h3>
                     <p className="text-xs text-body mt-0.5">Instructor: {course.instructor}</p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-primary">{course.progress}%</span>
-                    <p className="text-[11px] text-body">
-                      {course.completedLessons}/{course.totalLessons} lessons
-                    </p>
-                  </div>
+                  <Link
+                    href={`/dashboard/learn/${course.courseSlug || course.courseId}`}
+                    className="self-start px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl transition-colors shrink-0 shadow-sm"
+                  >
+                    Enter Classroom
+                  </Link>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-500"
-                    style={{ width: `${course.progress}%` }}
-                  />
-                </div>
-
-                {/* Next up snippet & action */}
-                <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 text-body">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span className="truncate max-w-sm">
-                      <strong className="text-heading font-medium">Up Next:</strong> {course.nextLesson}
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-body font-medium">Syllabus Completion</span>
+                    <span className="font-bold text-heading">
+                      {course.progress}% ({course.lessonsCompleted} / {course.totalLessons} lessons)
                     </span>
                   </div>
-                  <Link
-                    href={`/dashboard/learn/${course.id === "1" ? "full-stack-web-dev" : "python-programming"}`}
-                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
-                  >
-                    <PlayCircle className="w-3.5 h-3.5" /> Resume Lesson
-                  </Link>
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
+                      style={{ width: `${course.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-body">
+                  <span className="truncate max-w-[280px]">
+                    Schedule: <strong className="text-heading font-medium">{course.nextClass}</strong>
+                  </span>
+                  {course.hasCertificate ? (
+                    <Link
+                      href="/dashboard/certificates"
+                      className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Award className="w-3.5 h-3.5" /> Certificate Ready
+                    </Link>
+                  ) : (
+                    <span className="text-primary font-medium">Ongoing Cohort</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Upcoming Schedule / Announcements - 1 col */}
+        {/* Live Schedule Sidebar (1 Col) */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-heading">Live & Lab Schedule</h2>
+            <h2 className="text-lg font-bold text-heading flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" /> Upcoming Sessions
+            </h2>
             <Link
               href="/dashboard/schedule"
               className="text-xs font-semibold text-primary hover:underline"
@@ -207,32 +233,44 @@ export default function StudentDashboardPage() {
             </Link>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-border shadow-sm space-y-4">
-            {upcomingSchedule.map((item, idx) => (
+          <div className="p-5 rounded-2xl bg-white border border-border shadow-sm space-y-4">
+            {upcomingSchedule.map((item, index) => (
               <div
-                key={idx}
-                className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary/20 transition-colors space-y-1.5"
+                key={index}
+                className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2 hover:bg-primary-50/40 transition-colors"
               >
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-primary uppercase">{item.day}</span>
-                  <span className="text-body font-medium">{item.time}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-primary-dark px-2 py-0.5 rounded">
+                    {item.day}
+                  </span>
+                  <span className="text-xs font-semibold text-body flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-primary" /> {item.time}
+                  </span>
                 </div>
-                <h4 className="text-xs font-bold text-heading">{item.title}</h4>
-                <p className="text-[11px] text-body flex items-center gap-1">
-                  <Laptop className="w-3 h-3 text-primary" /> {item.mode}
-                </p>
+                <div>
+                  <h4 className="text-xs font-bold text-heading leading-snug">{item.title}</h4>
+                  <p className="text-[11px] text-body mt-0.5">Lead: {item.instructor}</p>
+                </div>
+                <div className="pt-1 flex items-center justify-between text-[11px]">
+                  <span className="text-primary font-medium truncate max-w-[170px]">{item.mode}</span>
+                  <Link
+                    href={item.link}
+                    className="text-primary font-bold hover:underline flex items-center gap-0.5"
+                  >
+                    Open <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
             ))}
 
             <div className="pt-2">
               <a
-                href="https://discord.gg"
+                href="https://zoom.us"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-primary-50 text-primary hover:bg-primary-100 rounded-xl text-xs font-semibold transition-colors"
+                className="w-full py-2.5 px-3 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
               >
-                <span>Join RESDA Student Community</span>
-                <ExternalLink className="w-3 h-3" />
+                <PlayCircle className="w-4 h-4" /> Launch Zoom Client
               </a>
             </div>
           </div>

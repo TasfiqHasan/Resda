@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -10,47 +11,19 @@ import {
   ArrowUpRight,
   Plus,
   ShieldCheck,
-  CheckCircle2,
-  Clock,
+  RefreshCw,
 } from "lucide-react";
 
 export default function AdminOverviewPage() {
-  const kpiStats = [
-    {
-      title: "Total Students",
-      value: "1,248",
-      change: "+18.2%",
-      trend: "up",
-      icon: Users,
-      description: "Active enrollments across all batches",
-    },
-    {
-      title: "Active Courses",
-      value: "24",
-      change: "+3 new",
-      trend: "up",
-      icon: BookOpen,
-      description: "Online & offline tracks combined",
-    },
-    {
-      title: "Monthly Revenue",
-      value: "৳ 14,85,000",
-      change: "+24.5%",
-      trend: "up",
-      icon: DollarSign,
-      description: "Tuition fees & IT project milestones",
-    },
-    {
-      title: "Pending Inquiries",
-      value: "19",
-      change: "5 urgent",
-      trend: "neutral",
-      icon: MessageSquare,
-      description: "From website contact form & courses",
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState({
+    totalStudents: "1,248",
+    activeCourses: 24,
+    monthlyRevenue: "৳ 14,85,000",
+    pendingInquiries: 19,
+  });
 
-  const recentInquiries = [
+  const [recentInquiries, setRecentInquiries] = useState<any[]>([
     {
       id: "inq-1",
       name: "Rafid Hossain",
@@ -87,9 +60,9 @@ export default function AdminOverviewPage() {
       time: "Yesterday",
       status: "RESPONDED",
     },
-  ];
+  ]);
 
-  const recentBatches = [
+  const [recentBatches, setRecentBatches] = useState<any[]>([
     {
       batch: "WD-48 (MERN Stack)",
       mode: "Online Live",
@@ -111,6 +84,68 @@ export default function AdminOverviewPage() {
       start: "Nov 15, 2026",
       status: "Open",
     },
+  ]);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/stats");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.kpis) {
+          setStatsData(data.kpis);
+        }
+        if (Array.isArray(data.recentInquiries) && data.recentInquiries.length > 0) {
+          setRecentInquiries(data.recentInquiries);
+        }
+        if (Array.isArray(data.recentBatches) && data.recentBatches.length > 0) {
+          setRecentBatches(data.recentBatches);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load dynamic admin stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const kpiCards = [
+    {
+      title: "Total Students",
+      value: statsData.totalStudents,
+      change: "+18.2%",
+      trend: "up",
+      icon: Users,
+      description: "Active enrollments across all batches",
+    },
+    {
+      title: "Active Courses",
+      value: statsData.activeCourses,
+      change: "Live store",
+      trend: "up",
+      icon: BookOpen,
+      description: "Online & offline tracks combined",
+    },
+    {
+      title: "Monthly Revenue",
+      value: statsData.monthlyRevenue,
+      change: "+24.5%",
+      trend: "up",
+      icon: DollarSign,
+      description: "Tuition fees & IT project milestones",
+    },
+    {
+      title: "Pending Inquiries",
+      value: statsData.pendingInquiries,
+      change: "Action needed",
+      trend: "neutral",
+      icon: MessageSquare,
+      description: "From website contact form & courses",
+    },
   ];
 
   return (
@@ -127,6 +162,13 @@ export default function AdminOverviewPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={loadStats}
+            title="Refresh Live Metrics"
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
           <Link
             href="/admin/courses"
             className="px-4 py-2 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-accent/20"
@@ -144,7 +186,7 @@ export default function AdminOverviewPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {kpiStats.map((kpi) => {
+        {kpiCards.map((kpi) => {
           const Icon = kpi.icon;
           return (
             <div
