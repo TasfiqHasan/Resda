@@ -22,7 +22,7 @@ export function WhatsAppWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 print:hidden">
+    <div className="fixed bottom-24 right-6 z-40 print:hidden">
       {/* Pop-up Card */}
       {isOpen && (
         <div className="mb-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-3 text-slate-900">
