@@ -48,6 +48,8 @@ function CourseDetailContent() {
     batchPreference: "Weekend Cohort",
   });
   const [enrollSubmitted, setEnrollSubmitted] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Download syllabus notification state
   const [syllabusDownloaded, setSyllabusDownloaded] = useState(false);
@@ -61,9 +63,43 @@ function CourseDetailContent() {
     setTimeout(() => setSyllabusDownloaded(false), 4000);
   };
 
-  const handleEnrollSubmit = (e: React.FormEvent) => {
+  const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEnrollSubmitted(true);
+    setPaymentError(null);
+
+    // If user explicitly chose pay at campus offline
+    if (paymentMethod === "offline") {
+      setEnrollSubmitted(true);
+      return;
+    }
+
+    // Process via SSLCommerz payment gateway
+    setIsProcessingPayment(true);
+    try {
+      const res = await fetch("/api/payment/ssl/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseSlug: course.slug,
+          paymentPlan: paymentOption === "installment" ? "INSTALLMENT" : "FULL",
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          method: paymentMethod.toUpperCase(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.gatewayUrl) {
+        window.location.href = data.gatewayUrl;
+      } else {
+        setPaymentError(data.error || "Failed to initialize payment gateway. Please try again.");
+        setIsProcessingPayment(false);
+      }
+    } catch {
+      setPaymentError("Could not connect to payment gateway. Please verify your connection.");
+      setIsProcessingPayment(false);
+    }
   };
 
   const discountPercent = Math.round(
@@ -548,12 +584,17 @@ function CourseDetailContent() {
 
                   {/* Payment Method Selector */}
                   <div>
-                    <label className="block text-xs font-bold text-heading mb-2">Payment Method</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-heading">Payment Method</label>
+                      <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> SSLCommerz Verified
+                      </span>
+                    </div>
                     <div className="grid grid-cols-4 gap-2">
                       {[
                         { id: "bkash", label: "bKash" },
                         { id: "nagad", label: "Nagad" },
-                        { id: "card", label: "Card / SSL" },
+                        { id: "card", label: "Cards / SSL" },
                         { id: "offline", label: "Pay at Campus" },
                       ].map((m) => (
                         <button
@@ -570,7 +611,25 @@ function CourseDetailContent() {
                         </button>
                       ))}
                     </div>
+
+                    {paymentMethod !== "offline" && (
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-purple-50/70 border border-purple-100 flex items-center justify-between text-[11px] text-purple-900">
+                        <span className="font-semibold flex items-center gap-1.5">
+                          <CreditCard className="w-3.5 h-3.5 text-primary" />
+                          SSLCommerz Gateway: Instant bKash, Nagad, Visa, Mastercard
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/80 px-2 py-0.5 rounded">
+                          0% Gateway Fee
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {paymentError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                      {paymentError}
+                    </div>
+                  )}
 
                   {/* Student Details */}
                   <div className="space-y-3 pt-1">
@@ -615,16 +674,24 @@ function CourseDetailContent() {
                   <div className="pt-3">
                     <button
                       type="submit"
-                      className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-primary/25 cursor-pointer flex items-center justify-center gap-2"
+                      disabled={isProcessingPayment}
+                      className="w-full py-3.5 px-4 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-primary/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70"
                     >
-                      <CreditCard className="w-4 h-4" />
-                      <span>
-                        Confirm & Reserve Seat (৳
-                        {paymentOption === "full"
-                          ? course.discountedPrice.toLocaleString()
-                          : installmentAmount.toLocaleString()}
-                        )
-                      </span>
+                      {isProcessingPayment ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Connecting to SSLCommerz Gateway...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          <span>
+                            {paymentMethod === "offline"
+                              ? "Confirm & Reserve Seat (Pay at Campus)"
+                              : `Pay ৳${(paymentOption === "full" ? course.discountedPrice : installmentAmount).toLocaleString()} via SSLCommerz`}
+                          </span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

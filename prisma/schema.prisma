@@ -128,6 +128,31 @@ model Enrollment {
   @@map("enrollments")
 }
 
+model Payment {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  tranId        String        @unique
+  valId         String?
+  amount        Float
+  currency      String        @default("BDT")
+  paymentMethod String?       // "SSLCOMMERZ", "bKash", "Nagad", "CARD"
+  paymentPlan   String        @default("FULL") // "FULL" or "INSTALLMENT"
+  status        PaymentStatus @default(PENDING)
+  customerName  String
+  customerEmail String
+  customerPhone String
+  courseSlug    String
+  courseTitle   String
+  cardType      String?
+  bankTranId    String?
+  cardIssuer    String?
+  cardBrand     String?
+  userId        String?       @db.ObjectId
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("payments")
+}
+
 // ============================================
 // SERVICE & INQUIRY MODELS
 // ============================================
