@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   Plus,
@@ -14,11 +15,13 @@ import {
   XCircle,
   MoreVertical,
   X,
+  ExternalLink,
 } from "lucide-react";
 
 export default function AdminCoursesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [courses, setCourses] = useState([
     {
       id: "crs-1",
@@ -77,6 +80,37 @@ export default function AdminCoursesPage() {
     },
   ]);
 
+  // Load latest courses from store & database
+  useEffect(() => {
+    async function loadCourses() {
+      try {
+        const res = await fetch("/api/courses?admin=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setCourses(
+              data.map((d: any) => ({
+                id: d.id,
+                slug: d.slug || d.id,
+                title: d.title,
+                category: d.category,
+                mode: d.mode === "Offline Campus" ? "OFFLINE" : d.mode === "Hybrid Format" ? "HYBRID" : "ONLINE",
+                price: d.price,
+                students: d.totalStudents || 0,
+                duration: d.duration,
+                instructor: typeof d.instructor === "object" ? d.instructor?.name || "Mentor" : d.instructor,
+                isPublished: d.isPublished ?? true,
+              }))
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load courses in admin:", err);
+      }
+    }
+    loadCourses();
+  }, []);
+
   // Form states for new course
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState("Web Development");
@@ -85,28 +119,91 @@ export default function AdminCoursesPage() {
   const [newDuration, setNewDuration] = useState("4 Months");
   const [newInstructor, setNewInstructor] = useState("RESDA Senior Mentor");
 
-  const handleCreateCourse = (e: React.FormEvent) => {
+  const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newCourseObj = {
-      id: `crs-${Date.now()}`,
-      title: newTitle,
-      category: newCategory,
-      mode: newMode,
-      price: parseFloat(newPrice),
-      students: 0,
-      duration: newDuration,
-      instructor: newInstructor,
-      isPublished: true,
-    };
-    setCourses([newCourseObj, ...courses]);
-    setShowAddModal(false);
-    setNewTitle("");
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle,
+          category: newCategory,
+          mode: newMode,
+          price: parseFloat(newPrice),
+          duration: newDuration,
+          instructor: newInstructor,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const created = data.course;
+        const newCourseObj = {
+          id: created.id,
+          slug: created.slug || created.id,
+          title: created.title,
+          category: created.category,
+          mode: newMode,
+          price: created.price,
+          students: 0,
+          duration: created.duration,
+          instructor: typeof created.instructor === "object" ? created.instructor?.name || newInstructor : created.instructor,
+          isPublished: true,
+        };
+        setCourses((prev) => [newCourseObj, ...prev]);
+        setShowAddModal(false);
+        setNewTitle("");
+      } else {
+        const newCourseObj = {
+          id: `crs-${Date.now()}`,
+          title: newTitle,
+          category: newCategory,
+          mode: newMode,
+          price: parseFloat(newPrice),
+          students: 0,
+          duration: newDuration,
+          instructor: newInstructor,
+          isPublished: true,
+        };
+        setCourses((prev) => [newCourseObj, ...prev]);
+        setShowAddModal(false);
+        setNewTitle("");
+      }
+    } catch {
+      const newCourseObj = {
+        id: `crs-${Date.now()}`,
+        title: newTitle,
+        category: newCategory,
+        mode: newMode,
+        price: parseFloat(newPrice),
+        students: 0,
+        duration: newDuration,
+        instructor: newInstructor,
+        isPublished: true,
+      };
+      setCourses((prev) => [newCourseObj, ...prev]);
+      setShowAddModal(false);
+      setNewTitle("");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const togglePublish = (id: string) => {
-    setCourses(
-      courses.map((c) => (c.id === id ? { ...c, isPublished: !c.isPublished } : c))
+  const togglePublish = async (id: string) => {
+    setCourses((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isPublished: !c.isPublished } : c))
     );
+    try {
+      await fetch("/api/courses", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "togglePublish" }),
+      });
+    } catch {
+      // Ignore
+    }
   };
 
   const filteredCourses = courses.filter((c) =>
@@ -128,12 +225,21 @@ export default function AdminCoursesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-accent/20"
-        >
-          <Plus className="w-4 h-4" /> Create New Course
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/courses"
+            target="_blank"
+            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-medium text-xs rounded-xl border border-slate-800 transition-colors flex items-center gap-1.5"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-accent" /> View Online Catalog
+          </Link>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-accent hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-accent/20"
+          >
+            <Plus className="w-4 h-4" /> Create New Course
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -170,7 +276,13 @@ export default function AdminCoursesPage() {
               {filteredCourses.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-900/60 transition-colors">
                   <td className="py-3.5 px-4">
-                    <p className="font-bold text-white">{c.title}</p>
+                    <Link
+                      href={`/courses/${(c as any).slug || c.id}`}
+                      target="_blank"
+                      className="font-bold text-white hover:text-accent transition-colors block"
+                    >
+                      {c.title}
+                    </Link>
                     <p className="text-[11px] text-slate-500">Lead: {c.instructor}</p>
                   </td>
                   <td className="py-3.5 px-4 font-medium text-slate-200">{c.category}</td>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -297,11 +297,13 @@ const EXTRA_COURSES: Course[] = [
 const CATEGORIES = [
   "All",
   "Web Development",
-  "Programming",
   "Data Science",
-  "Mobile Dev",
   "Cybersecurity",
+  "Infrastructure",
+  "UI/UX Design",
+  "Programming",
   "Digital Marketing",
+  "Mobile Dev",
 ];
 
 const LEVELS = ["All", "Beginner", "Intermediate", "Advanced"];
@@ -312,6 +314,57 @@ export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
+
+  // Fetch dynamic courses created via Admin Portal or API
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchDynamicCourses() {
+      try {
+        const res = await fetch("/api/courses");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) return;
+
+        const dynamicList: Course[] = data.map((c: any) => ({
+          id: c.slug || c.id,
+          title: c.title,
+          category: c.category,
+          level: c.level || "Beginner",
+          instructor: {
+            name: c.instructor?.name || "Expert Mentor",
+            role: c.instructor?.role || "Senior Instructor",
+            initials: c.instructor?.initials || "EM",
+          },
+          description: c.description || "",
+          duration: c.duration || "3 months",
+          lessons: c.lessonsCount || 36,
+          originalPrice: c.originalPrice || Math.round((c.price || 10000) * 1.3),
+          discountedPrice: c.price || 10000,
+          rating: c.rating || 4.9,
+          reviewsCount: c.reviewsCount || c.totalStudents || 120,
+          gradient: c.gradient || "from-purple-700 via-indigo-600 to-purple-900",
+          popular: c.isFeatured || false,
+        }));
+
+        if (!isMounted) return;
+
+        // Dynamic courses appear first (newest admin courses first), followed by initial catalog
+        const seenIds = new Set(dynamicList.map((c) => c.id.toLowerCase()));
+        const extraInitial = INITIAL_COURSES.filter(
+          (c) => !seenIds.has(c.id.toLowerCase())
+        );
+
+        setCoursesList([...dynamicList, ...extraInitial]);
+      } catch (err) {
+        console.warn("Could not load dynamic courses from API, fallback to initial courses:", err);
+      }
+    }
+
+    fetchDynamicCourses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Enrollment modal state
   const [enrollingCourse, setEnrollingCourse] = useState<Course | null>(null);
@@ -325,9 +378,18 @@ export default function CoursesPage() {
 
   const filteredCourses = useMemo(() => {
     return coursesList.filter((course) => {
-      // Category filter
+      // Category filter with smart sub-matching
+      const cat = (course.category || "").toLowerCase();
+      const selected = selectedCategory.toLowerCase();
+
       const matchesCategory =
-        selectedCategory === "All" || course.category === selectedCategory;
+        selectedCategory === "All" ||
+        cat === selected ||
+        (selected === "web development" && (cat.includes("web") || cat.includes("software"))) ||
+        (selected === "data science" && (cat.includes("data") || cat.includes("python") || cat.includes("ai"))) ||
+        (selected === "cybersecurity" && (cat.includes("security") || cat.includes("cyber"))) ||
+        (selected === "infrastructure" && (cat.includes("infra") || cat.includes("cloud") || cat.includes("network"))) ||
+        (selected === "ui/ux design" && (cat.includes("design") || cat.includes("ui") || cat.includes("ux")));
 
       // Level filter
       const matchesLevel =

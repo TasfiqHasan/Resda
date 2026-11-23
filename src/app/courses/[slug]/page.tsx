@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -32,7 +32,30 @@ import { getCourseBySlug, DetailedCourse } from "@/lib/courses-data";
 function CourseDetailContent() {
   const params = useParams();
   const slug = (params?.slug as string) || "full-stack-web-dev";
-  const course: DetailedCourse = getCourseBySlug(slug) || getCourseBySlug("full-stack-web-dev")!;
+  const [course, setCourse] = useState<DetailedCourse>(() => {
+    return getCourseBySlug(slug) || getCourseBySlug("full-stack-web-dev")!;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchCourseDetails() {
+      try {
+        const res = await fetch(`/api/courses/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data && data.title) {
+            setCourse(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load dynamic course details from API:", err);
+      }
+    }
+    fetchCourseDetails();
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
 
   // Syllabus accordion state
   const [openModuleIndex, setOpenModuleIndex] = useState<number | null>(0);
